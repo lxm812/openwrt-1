@@ -1,6 +1,5 @@
 #
-# Copyright (C) 2010-2014 OpenWrt.org
-# Copyright (C) 2016-2017 Luiz Angelo Daros de Luca <luizluca@gmail.com>
+# Copyright (C) 2010-2019 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -8,22 +7,22 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=elfutils
-PKG_VERSION:=0.174
+PKG_VERSION:=0.180
 PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=https://sourceware.org/$(PKG_NAME)/ftp/$(PKG_VERSION)
-PKG_HASH:=cdf27e70076e10a29539d89e367101d516bc4aa11b0d7777fe52139e3fcad08a
+PKG_HASH:=b827b6e35c59d188ba97d7cf148fa8dc6f5c68eb6c5981888dfdbb758c0b569d
+
 PKG_MAINTAINER:=Luiz Angelo Daros de Luca <luizluca@gmail.com>
-PKG_LICENSE:=GPL-3.0+
+PKG_LICENSE:=GPL-3.0-or-later
 PKG_LICENSE_FILES:=COPYING COPYING-GPLV2 COPYING-LGPLV3
 PKG_CPE_ID:=cpe:/a:elfutils_project:elfutils
+
 PKG_FIXUP:=autoreconf
-
 PKG_INSTALL:=1
-PKG_USE_MIPS16:=0
-
-PKG_BUILD_DEPENDS:=USE_UCLIBC:argp-standalone USE_MUSL:argp-standalone
+PKG_USE_MIPS16:=1
+PKG_BUILD_DEPENDS:=!USE_GLIBC:argp-standalone
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/nls.mk
@@ -33,24 +32,26 @@ define Package/elfutils/Default
   CATEGORY:=Libraries
   TITLE:=ELF manipulation libraries
   URL:=https://fedorahosted.org/elfutils/
+  ABI_VERSION:=1
 endef
 
 define Package/libasm
   $(call Package/elfutils/Default)
   TITLE+= (libasm)
-  DEPENDS:=libelf1 +libdw
+  DEPENDS:=+libelf +libdw
 endef
 
 define Package/libdw
   $(call Package/elfutils/Default)
-  DEPENDS:=libelf1 +libbz2
+  DEPENDS:=+libelf +libbz2
   TITLE+= (libdw)
 endef
 
-define Package/libelf1
+define Package/libelf
   $(call Package/elfutils/Default)
   DEPENDS:=$(INTL_DEPENDS) +zlib
   TITLE+= (libelf)
+  PROVIDES:=libelf1
 endef
 
 ifeq ($(CONFIG_BUILD_NLS),y)
@@ -61,6 +62,7 @@ endif
 
 CONFIGURE_ARGS += \
 	--program-prefix=eu- \
+	--disable-debuginfod \
 	--without-lzma
 
 TARGET_CFLAGS += -D_GNU_SOURCE -Wno-unused-result -Wno-format-nonliteral
@@ -79,19 +81,20 @@ endef
 
 define Package/libasm/install
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libasm*.so* $(1)/usr/lib/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libasm{-*.so,*.so.*} $(1)/usr/lib/
 endef
 
 define Package/libdw/install
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libdw*.so* $(1)/usr/lib/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libdw{-*.so,*.so.*} $(1)/usr/lib/
 endef
 
-define Package/libelf1/install
+define Package/libelf/install
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libelf*.so* $(1)/usr/lib/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libelf{-*.so,*.so.*} $(1)/usr/lib/
 endef
 
-$(eval $(call BuildPackage,libasm))
+# these lines need to be ordered by dependency because of ABI versioning
+$(eval $(call BuildPackage,libelf))
 $(eval $(call BuildPackage,libdw))
-$(eval $(call BuildPackage,libelf1))
+$(eval $(call BuildPackage,libasm))

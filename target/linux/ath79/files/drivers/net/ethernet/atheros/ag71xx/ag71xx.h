@@ -178,7 +178,11 @@ struct ag71xx {
 
 	struct phy_device	*phy_dev;
 	void			*phy_priv;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+	phy_interface_t		phy_if_mode;
+#else
 	int			phy_if_mode;
+#endif
 
 	unsigned int		link;
 	unsigned int		speed;
@@ -188,6 +192,7 @@ struct ag71xx {
 	struct timer_list	oom_timer;
 
 	struct reset_control *mac_reset;
+	struct reset_control *mdio_reset;
 
 	u32			fifodata[3];
 	u32			plldata[3];
